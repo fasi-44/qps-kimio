@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@nabh/shared": ["./packages/shared/src/index.ts"],
+      "@nabh/shared/*": ["./packages/shared/src/*"],
+      "@nabh/database": ["./packages/database/src/index.ts"],
+      "@nabh/database/*": ["./packages/database/src/*"]
+    }
+  }
+}

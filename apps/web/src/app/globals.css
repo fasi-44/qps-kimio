@@ -1,0 +1,280 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+/* Make `dark:` utilities follow the app theme class (next-themes), not OS prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ── Brand — Healthcare Professional ── */
+  --color-brand-teal:       #0EA5E9;
+  --color-brand-teal-dark:  #0284C7;
+  --color-brand-teal-light: #38BDF8;
+  --color-brand-cyan:       #06B6D4;
+  --color-brand-violet:     #818CF8;
+
+  /* ── Score thresholds ── */
+  --color-score-excellent:    #10B981;
+  --color-score-satisfactory: #F59E0B;
+  --color-score-partial:      #F97316;
+  --color-score-poor:         #EF4444;
+
+  /* ── Surfaces (defaults; overridden per-theme below) ── */
+  --color-surface:   #0F172A;
+  --color-surface-2: #1E293B;
+  --color-surface-3: #273549;
+
+  /* ── Typography ── */
+  --font-sans:    'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DARK MODE  —  Professional Slate
+   Clean hospital night-shift theme; deep but not near-black
+   ═══════════════════════════════════════════════════════════ */
+html.dark {
+  --color-surface:   #0F172A;
+  --color-surface-2: #1E293B;
+  --color-surface-3: #273549;
+
+  --text-base:       #F1F5F9;
+  --text-muted:      #64748B;
+
+  --topbar-bg:       rgba(15, 23, 42, 0.94);
+  --topbar-border:   rgba(255, 255, 255, 0.07);
+  --sidebar-bg:      rgba(10, 16, 32, 0.98);
+  --sidebar-border:  rgba(255, 255, 255, 0.07);
+
+  --card-bg:         #18222F;
+  --card-border:     rgba(255, 255, 255, 0.08);
+  --inner-bg:        rgba(255, 255, 255, 0.04);
+  --inner-border:    rgba(255, 255, 255, 0.07);
+
+  --card-shadow:     0 4px 24px rgba(0, 0, 0, 0.40);
+  --scrollbar-track: #1E293B;
+  --scrollbar-thumb: #334155;
+
+  /* Score button vars */
+  --score-0-bg:     rgba(239, 68,  68,  0.12);
+  --score-0-border: rgba(239, 68,  68,  0.30);
+  --score-0-text:   #FCA5A5;
+  --score-1-bg:     rgba(245, 158, 11,  0.12);
+  --score-1-border: rgba(245, 158, 11,  0.30);
+  --score-1-text:   #FCD34D;
+  --score-2-bg:     rgba(16,  185, 129, 0.12);
+  --score-2-border: rgba(16,  185, 129, 0.30);
+  --score-2-text:   #6EE7B7;
+  --score-0-active: rgba(239, 68,  68,  0.24);
+  --score-1-active: rgba(245, 158, 11,  0.24);
+  --score-2-active: rgba(16,  185, 129, 0.24);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE  —  Clinical White
+   Clean hospital day theme; white cards, navy sidebar stays
+   ═══════════════════════════════════════════════════════════ */
+:root,
+html:not(.dark) {
+  --color-surface:   #EFF5FC;
+  --color-surface-2: #FFFFFF;
+  --color-surface-3: #E6EEF8;
+
+  --text-base:       #0F172A;
+  --text-muted:      #64748B;
+
+  --topbar-bg:       rgba(239, 245, 252, 0.95);
+  --topbar-border:   rgba(15, 23, 42, 0.08);
+  --sidebar-bg:      rgba(10, 16, 32, 0.98);
+  --sidebar-border:  rgba(255, 255, 255, 0.07);
+
+  --card-bg:         rgba(255, 255, 255, 0.92);
+  --card-border:     rgba(15, 23, 42, 0.09);
+  --inner-bg:        rgba(15, 23, 42, 0.03);
+  --inner-border:    rgba(15, 23, 42, 0.08);
+
+  --card-shadow:     0 1px 4px rgba(15,23,42,0.07), 0 4px 16px rgba(15,23,42,0.05);
+  --scrollbar-track: #E2EAF4;
+  --scrollbar-thumb: #94A3B8;
+
+  /* Score button vars — more vivid on light bg */
+  --score-0-bg:     rgba(239, 68,  68,  0.10);
+  --score-0-border: rgba(239, 68,  68,  0.40);
+  --score-0-text:   #B91C1C;
+  --score-1-bg:     rgba(245, 158, 11,  0.10);
+  --score-1-border: rgba(245, 158, 11,  0.40);
+  --score-1-text:   #92400E;
+  --score-2-bg:     rgba(16,  185, 129, 0.10);
+  --score-2-border: rgba(16,  185, 129, 0.40);
+  --score-2-text:   #065F46;
+  --score-0-active: rgba(239, 68,  68,  0.20);
+  --score-1-active: rgba(245, 158, 11,  0.20);
+  --score-2-active: rgba(16,  185, 129, 0.20);
+}
+
+/* ── Light mode: fix dark-first text colours in main content ────
+   The sidebar is <aside>, page content is <main>, so this scoped
+   override converts dark-first text classes without touching nav.
+   ──────────────────────────────────────────────────────────────── */
+html:not(.dark) main .text-slate-100,
+html:not(.dark) main .text-slate-200,
+html:not(.dark) main .text-slate-300 { color: #0F172A !important; }
+
+html:not(.dark) main .text-slate-400 { color: #334155 !important; }
+html:not(.dark) main .text-slate-500 { color: #475569 !important; }
+html:not(.dark) main .text-slate-600 { color: #64748B !important; }
+html:not(.dark) main .text-slate-700 { color: #94A3B8 !important; }
+
+/* ── Dark mode: lift the dimmest content text for legibility (crisp pass) ──
+   slate-600/700 on the deep background read as low-contrast static. Scoped to
+   <main> so the navy sidebar/topbar are untouched. */
+html.dark main .text-slate-600 { color: #5C6A7E; }
+html.dark main .text-slate-700 { color: #4E5B6F; }
+
+/* Light mode: convert white border/divide utilities to dark-subtle */
+html:not(.dark) main .border-white\/6,
+html:not(.dark) main .border-white\/8,
+html:not(.dark) main .border-white\/10,
+html:not(.dark) main .border-white\/12 { border-color: rgba(15,23,42,0.09) !important; }
+
+html:not(.dark) main .divide-white\/5 > * + *,
+html:not(.dark) main .divide-white\/6 > * + * { border-color: rgba(15,23,42,0.07) !important; }
+
+/* Hover backgrounds in light mode */
+html:not(.dark) main .hover\:bg-white\/\[0\.03\]:hover,
+html:not(.dark) main .hover\:bg-white\/5:hover,
+html:not(.dark) main .hover\:bg-white\/8:hover { background: rgba(15,23,42,0.04) !important; }
+
+/* ──────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  font-feature-settings: "cv11", "ss01";
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+  color: var(--text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar            { width: 6px; height: 6px; }
+::-webkit-scrollbar-track      { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb      { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #38BDF8, #06B6D4, #0EA5E9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass — adapts automatically because vars switch */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+html:not(.dark) .glass {
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid rgba(15, 23, 42, 0.09);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+/* Animated gradient */
+@keyframes gradient-shift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+.animated-gradient {
+  background: linear-gradient(-45deg, #0F172A, #0EA5E9, #0A1628, #06B6D4, #0F172A);
+  background-size: 400% 400%;
+  animation: gradient-shift 12s ease infinite;
+}
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.2); }
+  50%       { box-shadow: 0 0 40px rgba(14, 165, 233, 0.5), 0 0 60px rgba(6, 182, 212, 0.2); }
+}
+.pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* ── Login floating bokeh — soft glowing particles rising slowly ────────────── */
+@keyframes login-bokeh-rise {
+  0%   { transform: translate3d(0, 0, 0) scale(0.7);                       opacity: 0; }
+  14%  {                                                                   opacity: var(--bokeh-op, 0.5); }
+  50%  { transform: translate3d(var(--bokeh-sway, 10px), -48vh, 0) scale(1); }
+  86%  {                                                                   opacity: calc(var(--bokeh-op, 0.5) * 0.65); }
+  100% { transform: translate3d(0, -94vh, 0) scale(1.12);                 opacity: 0; }
+}
+.login-bokeh {
+  position: absolute;
+  bottom: -80px;
+  border-radius: 9999px;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(0.5px);
+  will-change: transform, opacity;
+  animation: login-bokeh-rise var(--bokeh-dur, 22s) linear infinite;
+  animation-delay: var(--bokeh-delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-bokeh { animation: none; opacity: 0.18; }
+}
+
+/* Score ring */
+.score-ring {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+/* Input focus */
+input:focus, select:focus, textarea:focus { outline: none; }
+
+/* ── Browser autofill ─────────────────────────────────────────────────────────
+   1) Keep autofilled inputs on the dark theme (Chrome forces a light box).
+   2) Emit animations on autofill start/cancel so floating labels can react
+      (see FloatField in the login page). */
+@keyframes onAutoFillStart { from { /* noop */ } to { /* noop */ } }
+@keyframes onAutoFillCancel { from { /* noop */ } to { /* noop */ } }
+
+input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: 0.01s; }
+input:not(:-webkit-autofill) { animation-name: onAutoFillCancel; animation-duration: 0.01s; }
+
+/* Dark surfaces (login + dark mode): an OPAQUE dark fill fully covers the
+   browser's light autofill background, so the light text stays readable. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #F1F5F9 !important;
+  -webkit-box-shadow: 0 0 0 1000px #0F1827 inset !important;
+  caret-color: #38BDF8;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Light-mode content pages: light fill + dark text instead. */
+html:not(.dark) main input:-webkit-autofill,
+html:not(.dark) main input:-webkit-autofill:hover,
+html:not(.dark) main input:-webkit-autofill:focus,
+html:not(.dark) main input:-webkit-autofill:active {
+  -webkit-text-fill-color: #0F172A !important;
+  -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+  caret-color: #0EA5E9;
+}

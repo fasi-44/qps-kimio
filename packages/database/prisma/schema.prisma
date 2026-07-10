@@ -1,0 +1,1064 @@
+// NQAS Accreditation Platform — Database Schema
+// Prisma 7 | PostgreSQL 16
+// generator: prisma-client (Rust-free)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum AppModule {
+  NQAS
+  NABH
+  KAYAKALPA
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  HOD
+  ASSESSOR
+}
+
+enum AssessmentStatus {
+  DRAFT
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SENT_BACK
+}
+
+enum AssessmentType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum Quarter {
+  Q1
+  Q2
+  Q3
+  Q4
+}
+
+enum ScoreMappingType {
+  DIRECT
+  PROPORTIONAL
+  CONDITIONAL
+  NOT_APPLICABLE
+}
+
+enum ReviewAction {
+  APPROVED
+  REJECTED
+  SENT_BACK
+}
+
+enum NotificationType {
+  ASSESSMENT_SUBMITTED
+  ASSESSMENT_APPROVED
+  ASSESSMENT_REJECTED
+  ASSESSMENT_SENT_BACK
+  ASSESSMENT_OVERDUE
+  COMMITTEE_MEETING_SCHEDULED
+  AGENDA_DEADLINE
+  MINUTES_PENDING_APPROVAL
+  ACTION_OVERDUE
+  COMMITTEE_TENURE_EXPIRY
+  SYSTEM
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMMITTEE MANAGEMENT ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum CommitteeStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum MeetingFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  CUSTOM
+}
+
+enum MeetingMode {
+  PHYSICAL
+  ONLINE
+  HYBRID
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  RESCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum MembershipType {
+  DESIGNATION
+  NOMINATION
+}
+
+enum MembershipChangeType {
+  ADDED
+  REMOVED
+  REPLACED
+  ROLE_CHANGED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE_OF_ABSENCE
+  INVITED_GUEST
+}
+
+enum AgendaStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  CLARIFICATION_REQUESTED
+  PUBLISHED
+}
+
+enum MinutesMethod {
+  DIRECT
+  UPLOAD
+}
+
+enum MinutesStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+}
+
+enum ActionStatus {
+  OPEN
+  IN_PROGRESS
+  PARTIALLY_COMPLETED
+  COMPLETED
+  CLOSED
+  OVERDUE
+}
+
+enum ActionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ActionSource {
+  AGENDA
+  AUDIT_FINDING
+  INCIDENT
+  ASSESSMENT
+  COMMITTEE_DECISION
+}
+
+enum CarryForwardDecision {
+  CONTINUE
+  MODIFY_DUE_DATE
+  ESCALATE
+  CLOSE
+}
+
+// ─────────────────────────────────────────────────────────────
+// QUALITY & PATIENT SAFETY — KPI / OUTCOME INDICATORS ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum IndicatorFramework {
+  KPI
+  OUTCOME
+}
+
+// How an indicator's value is computed from the admin's raw inputs.
+//   RATIO  → (numerator * multiplier) / denominator   (multiplier = 1 / 100 / 1000)
+//   MEAN   → average of sampleValues[]
+//   MEDIAN → median of sampleValues[]
+//   CUSTOM → evaluated from customExpression
+enum IndicatorFormula {
+  RATIO
+  MEAN
+  MEDIAN
+  CUSTOM
+}
+
+enum IndicatorScope {
+  HOSPITAL
+  DEPARTMENT
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUTH & USERS
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String
+  name                String
+  role                UserRole  @default(ASSESSOR)
+  moduleAccess        AppModule[] @default([NQAS])
+  isActive            Boolean   @default(true)
+  avatarUrl           String?
+  phone               String?
+  designation         String?
+  department          String?   // Free text — HOD/Assessor's department
+  lastLoginAt         DateTime?
+  passwordChangedAt   DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  refreshTokens            RefreshToken[]
+  passwordResets           PasswordReset[]
+  assessments              Assessment[]         @relation("AssessmentCreatedBy")
+  assessmentReviews        AssessmentReview[]
+  auditLogs                AuditLog[]
+  notifications            Notification[]
+  institutionAssessments   InstitutionAssessment[] @relation("InstAssessmentCreator")
+
+  // Committee management
+  // A user may hold multiple titles/designations (many-to-many).
+  designations             Designation[]                @relation("UserDesignations")
+  committeesCreated        Committee[]                  @relation("CommitteeCreator")
+  committeeMemberships     CommitteeMember[]            @relation("CommitteeMembership")
+  membershipChanges        CommitteeMembershipHistory[] @relation("MembershipChanger")
+  meetingsCreated          CommitteeMeeting[]           @relation("MeetingCreator")
+  agendaItemsSubmitted     AgendaItem[]                 @relation("AgendaSubmitter")
+  minutesApproved          MeetingMinutes[]             @relation("MinutesApprover")
+  actionsResponsible       ActionItem[]                 @relation("ActionResponsible")
+  actionsClosed            ActionItem[]                 @relation("ActionCloser")
+  carryForwardsCreated     ActionCarryForward[]         @relation("CarryForwardCreator")
+  emailTemplates           EmailTemplate[]              @relation("EmailTemplateCreator")
+
+  // Quality & Patient Safety — KPI/Outcome indicators
+  indicatorTemplates       IndicatorTemplate[]          @relation("IndicatorTemplateCreator")
+  indicatorEntries         IndicatorEntry[]             @relation("IndicatorEntryAuthor")
+
+  @@index([email])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_resets")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ROLE PERMISSIONS
+// Admin-configurable: which modules each role can access
+// ─────────────────────────────────────────────────────────────
+
+model RolePermission {
+  role         UserRole   @id
+  moduleAccess AppModule[]
+  pageAccess   String[]
+  updatedAt    DateTime   @updatedAt
+
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// HOSPITAL SETTINGS
+// ─────────────────────────────────────────────────────────────
+
+model HospitalSettings {
+  id                String  @id @default(cuid())
+  name              String  @default("Hospital Name")
+  shortName         String?
+  address           String?
+  city              String?
+  state             String?
+  pincode           String?
+  phone             String?
+  email             String?
+  website           String?
+  logoUrl           String?
+  districtBoard     String?
+  accreditationBody String?
+  nabh_reg_number   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("hospital_settings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// NQAS DISTRICT TOOLKIT STRUCTURE
+// Seeded once from DH-20_NQAS_Toolkit_28-June_2023.xlsx
+// DO NOT modify after initial seed
+// ─────────────────────────────────────────────────────────────
+
+model Department {
+  id          String   @id @default(cuid())
+  code        String   @unique  // "emergency", "opd", "icu" ...
+  name        String
+  sheetName   String            // Exact Excel sheet name for reference
+  order       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  areasOfConcern    AreaOfConcern[]
+  assessments       Assessment[]
+  clientDepartments ClientDepartment[]
+  committeeMembers  CommitteeMember[]
+
+  @@map("departments")
+}
+
+model AreaOfConcern {
+  id           String     @id @default(cuid())
+  code         String     // "A", "B" ... "H"
+  name         String     // "Service Provision", "Patient Rights" ...
+  order        Int
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  standards    Standard[]
+
+  @@unique([code, departmentId])
+  @@index([departmentId])
+  @@map("areas_of_concern")
+}
+
+model Standard {
+  id              String        @id @default(cuid())
+  code            String        // "A1", "A2", "B1" ...
+  name            String        // "Facility Provides Curative Services"
+  maxScore        Int           @default(0)
+  order           Int
+  areaOfConcernId String
+  areaOfConcern   AreaOfConcern @relation(fields: [areaOfConcernId], references: [id])
+  createdAt       DateTime      @default(now())
+
+  measurableElements MeasurableElement[]
+
+  @@unique([code, areaOfConcernId])
+  @@index([areaOfConcernId])
+  @@map("standards")
+}
+
+model MeasurableElement {
+  id                  String    @id @default(cuid())
+  meRef               String    // "ME A1.1.", "ME B1.2."
+  meDescription       String    // "The facility provides General Medicine services"
+  checkpoint          String?   // "Availability of Emergency Medical Procedures" (null = not scored)
+  maxScore            Int       @default(0)  // 0 if no checkpoint, 2 if has checkpoint
+  isScored            Boolean   @default(false)
+  assessmentMethod    String?   // "SI/OB", "RR", "PI"
+  meansOfVerification String?   // "Poisoning, Snake Bite, CVA ..."
+  order               Int
+  standardId          String
+  standard            Standard  @relation(fields: [standardId], references: [id])
+  createdAt           DateTime  @default(now())
+
+  clientMappings      ChecklistMapping[]
+
+  @@unique([meRef, standardId])
+  @@index([standardId])
+  @@index([isScored])
+  @@map("measurable_elements")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLIENT HOSPITAL CHECKLISTS
+// Digitised from the 14 department PDFs
+// ─────────────────────────────────────────────────────────────
+
+model ClientDepartment {
+  id                String      @id @default(cuid())
+  code              String      @unique  // "EMERGENCY", "OPD", "ICU" ...
+  name              String
+  pdfFileName       String               // "1.EMERGENCY-ONCO 2024.pdf"
+  order             Int
+  isActive          Boolean     @default(true)
+  module            AppModule   @default(NQAS)
+  programmes        String[]    @default(["NQAS"])  // ["NQAS"], ["NQAS","MUSQAN"], ["NQAS","LAQSHYA"]
+  nqasDepartmentId  String?     @unique  // Links to NQAS Department
+  nqasDepartment    Department? @relation(fields: [nqasDepartmentId], references: [id])
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  sections    ClientSection[]
+
+  @@index([nqasDepartmentId])
+  @@map("client_departments")
+}
+
+model ClientSection {
+  id                 String           @id @default(cuid())
+  sectionCode        String           // "SEC-1", "SEC-2"
+  sectionName        String           // "Clinical Services"
+  sectionOrder       Int
+  clientDepartmentId String
+  clientDepartment   ClientDepartment @relation(fields: [clientDepartmentId], references: [id])
+  createdAt          DateTime         @default(now())
+
+  checkpoints        ClientCheckpoint[]
+
+  @@unique([sectionCode, clientDepartmentId])
+  @@index([clientDepartmentId])
+  @@map("client_sections")
+}
+
+model ClientCheckpoint {
+  id               String        @id @default(cuid())
+  checkpointCode   String        // "EMG-001", "OPD-012"
+  description      String
+  evidenceRequired String?
+  maxScore         Int           @default(2)
+  scoreOptions     Int[]         // [0, 1, 2] or [0, 2] etc.
+  checkpointOrder  Int
+  clientSectionId  String
+  clientSection    ClientSection @relation(fields: [clientSectionId], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  mapping          ChecklistMapping?
+  responses        AssessmentResponse[]
+
+  @@unique([checkpointCode, clientSectionId])
+  @@index([clientSectionId])
+  @@map("client_checkpoints")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CHECKLIST MAPPING
+// One-time import: Client checkpoint → NQAS Measurable Element
+// Re-import is upsert-safe (adds new, updates changed, never deletes)
+// ─────────────────────────────────────────────────────────────
+
+model ChecklistMapping {
+  id                    String             @id @default(cuid())
+  clientCheckpointId    String             @unique
+  clientCheckpoint      ClientCheckpoint   @relation(fields: [clientCheckpointId], references: [id])
+  measurableElementId   String?            // null = N/A (no district equivalent)
+  measurableElement     MeasurableElement? @relation(fields: [measurableElementId], references: [id])
+  scoreMappingType      ScoreMappingType   @default(DIRECT)
+  scoreMappingFormula   Json?              // {multiplier} or [{clientScore, districtScore, label}]
+  complianceThreshold   Int                @default(70)
+  isNa                  Boolean            @default(false)
+  naReason              String?
+  remarks               String?
+  importVersion         String?            // Track which import this came from
+  importedAt            DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([measurableElementId])
+  @@map("checklist_mappings")
+}
+
+// ─────────────────────────────────────────────────────────────
+// INSTITUTION ASSESSMENTS
+// Admin creates one per quarter; department assessments link to it
+// ─────────────────────────────────────────────────────────────
+
+model InstitutionAssessment {
+  id             String         @id @default(cuid())
+  name           String
+  quarter        Quarter
+  year           Int
+  startDate      DateTime       @db.Date
+  endDate        DateTime       @db.Date
+  assessmentDate DateTime
+  type           AssessmentType @default(INTERNAL)
+  module         AppModule      @default(NQAS)
+  assessorNames  String[]       @default([])
+  notes          String?
+  createdById    String
+  createdBy      User           @relation("InstAssessmentCreator", fields: [createdById], references: [id])
+  assessments    Assessment[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([quarter, year, type, module])
+  @@index([createdById])
+  @@map("institution_assessments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSESSMENTS
+// ─────────────────────────────────────────────────────────────
+
+model Assessment {
+  id                String           @id @default(cuid())
+  quarter           Quarter
+  year              Int
+  startDate         DateTime         @db.Date
+  endDate           DateTime         @db.Date
+  assessmentDate    DateTime
+  module            AppModule        @default(NQAS)
+  type              AssessmentType   @default(INTERNAL)
+  status            AssessmentStatus @default(DRAFT)
+  departmentId      String
+  department        Department       @relation(fields: [departmentId], references: [id])
+  assessorId        String
+  assessor          User             @relation("AssessmentCreatedBy", fields: [assessorId], references: [id])
+  assesseeName      String
+  assessorNames     String[]         // Multiple assessors possible
+  completedSections String[]         @default([])  // Section codes marked as saved
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  totalClientScore  Int              @default(0)
+  totalNqasScore    Int              @default(0)
+  maxClientScore    Int              @default(0)
+  maxNqasScore      Int              @default(0)
+  compliancePct     Float            @default(0)
+  notes             String?          // Major gaps (free text)
+  strengths         String?          // Strengths observed
+  recommendations   String?          // Recommendations
+  institutionAssessmentId String?
+  institutionAssessment   InstitutionAssessment? @relation(fields: [institutionAssessmentId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  responses         AssessmentResponse[]
+  reviews           AssessmentReview[]
+
+  @@unique([departmentId, quarter, year, type, module])
+  @@index([departmentId])
+  @@index([assessorId])
+  @@index([status])
+  @@index([quarter, year])
+  @@index([institutionAssessmentId])
+  @@map("assessments")
+}
+
+model AssessmentResponse {
+  id                     String            @id @default(cuid())
+  assessmentId           String
+  assessment             Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  clientCheckpointId     String
+  clientCheckpoint       ClientCheckpoint  @relation(fields: [clientCheckpointId], references: [id])
+  module                 AppModule         @default(NQAS)
+  clientScore            Int               @default(0)
+  nqasScore              Int               @default(0)   // Auto-calculated
+  isNa                   Boolean           @default(false)
+  mappingSnapshotType    ScoreMappingType? // Snapshot at time of response
+  mappingSnapshotFormula Json?             // Snapshot for historical accuracy
+  evidenceUrls           String[]          @default([])
+  remarks                String?
+  usedMethod             String?           // Assessment method actually used (SI, OB, RR, PI...)
+  sectionCode            String            // For section-wise progress tracking
+  updatedAt              DateTime          @updatedAt
+  createdAt              DateTime          @default(now())
+
+  @@unique([assessmentId, clientCheckpointId])
+  @@index([assessmentId])
+  @@index([clientCheckpointId])
+  @@index([sectionCode])
+  @@index([module])
+  @@map("assessment_responses")
+}
+
+model AssessmentReview {
+  id           String       @id @default(cuid())
+  assessmentId String
+  assessment   Assessment   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  action       ReviewAction
+  module       AppModule    @default(NQAS)
+  reviewerId   String
+  reviewer     User         @relation(fields: [reviewerId], references: [id])
+  remarks      String?
+  createdAt    DateTime     @default(now())
+
+  @@index([assessmentId])
+  @@index([reviewerId])
+  @@index([module])
+  @@map("assessment_reviews")
+}
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  module    AppModule        @default(NQAS)
+  title     String
+  message   String
+  meta      Json?            // {assessmentId, departmentId, ...}
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, module])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT LOGS
+// Immutable — never deleted
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String   // "LOGIN", "LOGOUT", "CREATE_ASSESSMENT", "SUBMIT_ASSESSMENT" ...
+  resource   String   // "User", "Assessment", "Mapping" ...
+  resourceId String?
+  oldValue   Json?    // Previous state (for updates)
+  newValue   Json?    // New state (for updates)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMMITTEE MANAGEMENT
+// Digital lifecycle of NABH/NQAS committees:
+// constitution → members → meetings → agenda → minutes → actions
+// ─────────────────────────────────────────────────────────────
+
+// Admin-managed lookup. Backs designation-based committee membership;
+// the "current incumbent" is resolved from active users linked here.
+model Designation {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]            @relation("UserDesignations")
+  committeeMembers CommitteeMember[]
+
+  @@map("designations")
+}
+
+// Configurable catalog of committee positions (FRS §3.2).
+// canApprove drives position-gated minutes/action approval (ADMIN overrides).
+model CommitteePositionType {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  order        Int      @default(0)
+  isLeadership Boolean  @default(false)
+  canApprove   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members CommitteeMember[]
+
+  @@map("committee_position_types")
+}
+
+model Committee {
+  id            String           @id @default(cuid())
+  name          String
+  category      String?
+  type          String?
+  purpose       String?
+  frequency     MeetingFrequency @default(QUARTERLY)
+  effectiveDate DateTime?        @db.Date
+  expiryDate    DateTime?        @db.Date
+  status        CommitteeStatus  @default(ACTIVE)
+  module        AppModule        @default(NQAS)
+  createdById   String
+  createdBy     User             @relation("CommitteeCreator", fields: [createdById], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  members  CommitteeMember[]
+  history  CommitteeMembershipHistory[]
+  meetings CommitteeMeeting[]
+  actions  ActionItem[]
+
+  @@index([status])
+  @@index([module])
+  @@index([createdById])
+  @@map("committees")
+}
+
+model CommitteeMember {
+  id             String                @id @default(cuid())
+  committeeId    String
+  committee      Committee             @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  positionTypeId String
+  positionType   CommitteePositionType @relation(fields: [positionTypeId], references: [id])
+  membershipType MembershipType        @default(NOMINATION)
+  userId         String?
+  user           User?                 @relation("CommitteeMembership", fields: [userId], references: [id], onDelete: SetNull)
+  designationId  String?
+  designation    Designation?          @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  departmentId   String?
+  department     Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  nomineeName    String?
+  startDate      DateTime?             @db.Date
+  endDate        DateTime?             @db.Date
+  isActive       Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  attendance MeetingAttendance[]
+
+  @@index([committeeId])
+  @@index([userId])
+  @@index([designationId])
+  @@index([positionTypeId])
+  @@map("committee_members")
+}
+
+// Immutable — never deleted (FRS §3.4). memberId is a plain string so
+// history survives member removal.
+model CommitteeMembershipHistory {
+  id            String               @id @default(cuid())
+  committeeId   String
+  committee     Committee            @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  memberId      String?
+  changeType    MembershipChangeType
+  previousValue Json?
+  newValue      Json?
+  changedById   String?
+  changedBy     User?                @relation("MembershipChanger", fields: [changedById], references: [id], onDelete: SetNull)
+  changeReason  String?
+  createdAt     DateTime             @default(now())
+
+  @@index([committeeId])
+  @@index([memberId])
+  @@map("committee_membership_history")
+}
+
+model CommitteeMeeting {
+  id              String             @id @default(cuid())
+  committeeId     String
+  committee       Committee          @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  title           String
+  scheduledDate   DateTime
+  time            String?
+  venue           String?
+  meetingLink     String?            // Online/hybrid join URL
+  mode            MeetingMode        @default(PHYSICAL)
+  status          MeetingStatus      @default(SCHEDULED)
+  sendEmail       Boolean            @default(false) // Email reminders enabled
+  reminderOffsets Int[]              @default([])    // Hours before the meeting to remind
+  reminderTemplateId String?                         // Email template used for reminders
+  reminderTemplate   EmailTemplate?  @relation("MeetingReminderTemplate", fields: [reminderTemplateId], references: [id], onDelete: SetNull)
+  attendanceDocs  String[]           @default([])    // Uploaded signed attendance sheet(s)
+  isRecurring     Boolean            @default(false)
+  recurrenceRule  String?
+  parentMeetingId String?
+  parentMeeting   CommitteeMeeting?  @relation("MeetingSeries", fields: [parentMeetingId], references: [id], onDelete: SetNull)
+  childMeetings   CommitteeMeeting[] @relation("MeetingSeries")
+  agendaDeadline  DateTime?
+  createdById     String
+  createdBy       User               @relation("MeetingCreator", fields: [createdById], references: [id])
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  agendaItems       AgendaItem[]
+  attendance        MeetingAttendance[]
+  minutes           MeetingMinutes?
+  actions           ActionItem[]
+  carryForwardsFrom ActionCarryForward[] @relation("CarryForwardFrom")
+  carryForwardsTo   ActionCarryForward[] @relation("CarryForwardTo")
+
+  @@index([committeeId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([parentMeetingId])
+  @@index([reminderTemplateId])
+  @@map("committee_meetings")
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  subject     String
+  body        String                          // HTML body, supports {{placeholders}}
+  category    String   @default("MEETING_REMINDER")
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdBy   User?    @relation("EmailTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  meetings CommitteeMeeting[] @relation("MeetingReminderTemplate")
+
+  @@index([category])
+  @@map("email_templates")
+}
+
+model MeetingAttendance {
+  id        String           @id @default(cuid())
+  meetingId String
+  meeting   CommitteeMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    CommitteeMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status    AttendanceStatus @default(ABSENT)
+  remarks   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([meetingId, memberId])
+  @@index([meetingId])
+  @@index([memberId])
+  @@map("meeting_attendance")
+}
+
+model AgendaItem {
+  id             String           @id @default(cuid())
+  meetingId      String
+  meeting        CommitteeMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  submittedById  String
+  submittedBy    User             @relation("AgendaSubmitter", fields: [submittedById], references: [id])
+  status         AgendaStatus     @default(SUBMITTED)
+  supportingDocs String[]         @default([])
+  reviewComment  String?
+  order          Int              @default(0)
+  version        Int              @default(1)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  minuteEntries MinuteEntry[]
+  actions       ActionItem[]
+
+  @@index([meetingId])
+  @@index([submittedById])
+  @@index([status])
+  @@map("agenda_items")
+}
+
+model MeetingMinutes {
+  id           String           @id @default(cuid())
+  meetingId    String           @unique
+  meeting      CommitteeMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  method       MinutesMethod    @default(DIRECT)
+  status       MinutesStatus    @default(DRAFT)
+  fileUrl      String?
+  version      Int              @default(1)
+  approvedById String?
+  approvedBy   User?            @relation("MinutesApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  publishedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  entries MinuteEntry[]
+
+  @@index([status])
+  @@map("meeting_minutes")
+}
+
+model MinuteEntry {
+  id                String         @id @default(cuid())
+  minutesId         String
+  minutes           MeetingMinutes @relation(fields: [minutesId], references: [id], onDelete: Cascade)
+  agendaItemId      String?
+  agendaItem        AgendaItem?    @relation(fields: [agendaItemId], references: [id], onDelete: SetNull)
+  discussionSummary String?
+  decisions         String?
+  recommendations   String?
+  order             Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([minutesId])
+  @@index([agendaItemId])
+  @@map("minute_entries")
+}
+
+model ActionItem {
+  id                   String            @id @default(cuid())
+  actionCode           String            @unique
+  description          String
+  committeeId          String
+  committee            Committee         @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  meetingId            String?
+  meeting              CommitteeMeeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  agendaItemId         String?
+  agendaItem           AgendaItem?       @relation(fields: [agendaItemId], references: [id], onDelete: SetNull)
+  source               ActionSource      @default(COMMITTEE_DECISION)
+  responsibleUserId    String?
+  responsibleUser      User?             @relation("ActionResponsible", fields: [responsibleUserId], references: [id], onDelete: SetNull)
+  department           String?
+  priority             ActionPriority    @default(MEDIUM)
+  dueDate              DateTime?         @db.Date
+  targetCompletionDate DateTime?         @db.Date
+  status               ActionStatus      @default(OPEN)
+  remarks              String?
+  evidenceUrls         String[]          @default([])
+  closedById           String?
+  closedBy             User?             @relation("ActionCloser", fields: [closedById], references: [id], onDelete: SetNull)
+  reopenedCount        Int               @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  carryForwards ActionCarryForward[]
+
+  @@index([committeeId])
+  @@index([meetingId])
+  @@index([status])
+  @@index([responsibleUserId])
+  @@map("action_items")
+}
+
+model ActionCarryForward {
+  id            String               @id @default(cuid())
+  actionId      String
+  action        ActionItem           @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  fromMeetingId String?
+  fromMeeting   CommitteeMeeting?    @relation("CarryForwardFrom", fields: [fromMeetingId], references: [id], onDelete: SetNull)
+  toMeetingId   String?
+  toMeeting     CommitteeMeeting?    @relation("CarryForwardTo", fields: [toMeetingId], references: [id], onDelete: SetNull)
+  decision      CarryForwardDecision @default(CONTINUE)
+  newDueDate    DateTime?            @db.Date
+  createdById   String?
+  createdBy     User?                @relation("CarryForwardCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime             @default(now())
+
+  @@index([actionId])
+  @@index([fromMeetingId])
+  @@index([toMeetingId])
+  @@map("action_carry_forwards")
+}
+
+// ─────────────────────────────────────────────────────────────
+// QUALITY & PATIENT SAFETY — KPI / OUTCOME INDICATORS
+// Super Admin defines Types + Indicator templates (the calculation rules).
+// Admin enters raw numbers per month; the result is auto-computed & stored.
+// ─────────────────────────────────────────────────────────────
+
+// A grouping within a framework, e.g. "Productivity", "Efficiency".
+// Scoped per department for OUTCOME indicators (the PDF repeats the types under
+// each department); KPI types use departmentCode = "" (hospital-wide).
+model IndicatorType {
+  id             String             @id @default(cuid())
+  framework      IndicatorFramework
+  departmentCode String             @default("")  // "" = hospital/KPI, else dept code (Outcome)
+  departmentName String?            // "Emergency Department" ... (null for KPI)
+  name           String             // "Productivity", "Efficiency", "Service Quality" ...
+  description    String?
+  order          Int                @default(0)
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  templates   IndicatorTemplate[]
+
+  @@unique([framework, departmentCode, name])
+  @@index([framework])
+  @@index([departmentCode])
+  @@map("indicator_types")
+}
+
+// The "Quality Indicator" definition — owned by Super Admin. Carries the
+// numerator/denominator meaning, the formula, and reference metadata.
+model IndicatorTemplate {
+  id               String           @id @default(cuid())
+  typeId           String
+  type             IndicatorType    @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  name             String           // Quality Indicator name, e.g. "Bed Occupancy Rate"
+  numeratorLabel   String?          // definition text from the PDF
+  denominatorLabel String?          // definition text from the PDF
+  formulaType      IndicatorFormula @default(RATIO)
+  multiplier       Float            @default(1)   // 1 = ratio, 100 = %, 1000 = per-thousand
+  customExpression String?          // when formulaType = CUSTOM
+  formula          String?          // the indicator's formula, shown in the UI
+  formulaSpec      Json?            // structured formula (inputs, numerator/denominator, scale) — drives the calculator
+  unit             String?          // "%", "per 1000", "days", "score" ...
+  frequency        String?          // "Monthly", "Quarterly" ...
+  sourceOfData     String?
+  significance     String?
+  target           Float?           // optional performance target (enables RAG status)
+  higherIsBetter   Boolean          @default(true)  // is a higher value better? (mortality etc. = false)
+  scope            IndicatorScope   @default(HOSPITAL)
+  // Decoupled from the NQAS toolkit departments — a plain code/name so QPS
+  // can cover departments (e.g. Nuclear Medicine) the toolkit doesn't list.
+  departmentCode   String?          // e.g. "emergency" (Outcome Indicators)
+  departmentName   String?          // e.g. "Emergency Department"
+  order            Int              @default(0)
+  isActive         Boolean          @default(true)
+  createdById      String?
+  createdBy        User?            @relation("IndicatorTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  entries          IndicatorEntry[]
+
+  @@index([typeId])
+  @@index([departmentCode])
+  @@map("indicator_templates")
+}
+
+// An Admin's monthly data point for one indicator. computedResult is derived
+// from the template's formula at save time (and recomputable on edit).
+model IndicatorEntry {
+  id               String            @id @default(cuid())
+  templateId       String
+  template         IndicatorTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  year             Int
+  month            Int               // 1–12
+  numeratorValue   Float?            // for RATIO (product of the numerator inputs)
+  denominatorValue Float?            // for RATIO (product of the denominator inputs)
+  sampleValues     Float[]           @default([])  // for MEAN / MEDIAN
+  inputValues      Json?             // raw per-variable inputs for the formula calculator (round-trip)
+  computedResult   Float?
+  note             String?
+  enteredById      String?
+  enteredBy        User?             @relation("IndicatorEntryAuthor", fields: [enteredById], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // One value per indicator per month (department is fixed by the template).
+  @@unique([templateId, year, month])
+  @@index([templateId])
+  @@index([year, month])
+  @@map("indicator_entries")
+}

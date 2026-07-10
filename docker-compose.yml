@@ -1,0 +1,87 @@
+name: qps-kmio
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nabh_user
+      POSTGRES_PASSWORD: nabh_pass
+      POSTGRES_DB: nabh_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nabh_user -d nabh_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nabh-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: qps-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nabh-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: qps-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - nabh-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: qps-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nabh.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - nabh-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  pgadmin_data:
+
+networks:
+  nabh-net:
+    driver: bridge
