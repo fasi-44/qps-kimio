@@ -21,7 +21,9 @@ const SocketContext = createContext<SocketContextValue>({
   connected: false,
 });
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:3001';
+// Empty → same origin: socket.io connects to the current host and the request
+// is proxied to the API via next.config.ts rewrites (/socket.io/*).
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || undefined;
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
@@ -41,7 +43,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     const socket = io(WS_URL, {
       auth: { token: accessToken },
-      transports: ['websocket'],
+      // polling first so it works through the Next.js proxy, then upgrade.
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1500,
       reconnectionAttempts: 10,

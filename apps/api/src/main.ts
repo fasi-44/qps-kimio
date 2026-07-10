@@ -113,8 +113,9 @@ async function bootstrap() {
   // Trust proxy (for nginx)
   app.set('trust proxy', 1);
 
-  // Render (and most PaaS) inject the port to bind via $PORT.
-  const port = parseInt(process.env.PORT || process.env.API_PORT || '3001', 10);
+  // Single-service deploy: Next.js owns Render's public $PORT and proxies
+  // /api to this server, so the API binds a fixed internal port.
+  const port = parseInt(process.env.API_PORT || '4000', 10);
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 API running on http://localhost:${port}/${apiPrefix}`);

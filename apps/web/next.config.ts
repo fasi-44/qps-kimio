@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     return [
       { source: '/api/:path*', destination: `${target}/api/:path*` },
       { source: '/uploads/:path*', destination: `${target}/uploads/:path*` },
+      { source: '/socket.io/:path*', destination: `${target}/socket.io/:path*` },
     ];
   },
 };
