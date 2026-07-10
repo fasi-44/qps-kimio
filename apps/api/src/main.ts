@@ -27,9 +27,20 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS — allow the configured frontend origin(s) plus any *.onrender.com host
+  // (so a Render-assigned hostname suffix can't silently break login).
+  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Non-browser clients (curl, server-to-server) send no Origin header.
+      if (!origin) return callback(null, true);
+      const ok =
+        allowedOrigins.includes(origin) || /\.onrender\.com$/.test(new URL(origin).hostname);
+      return callback(ok ? null : new Error(`Origin not allowed by CORS: ${origin}`), ok);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
