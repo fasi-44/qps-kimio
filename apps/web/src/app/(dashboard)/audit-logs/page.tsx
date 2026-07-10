@@ -98,7 +98,7 @@ export default function AuditLogsPage() {
       exportParams.set('to', d.toISOString());
     }
     const token = useAuthStore.getState().accessToken;
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? '/api';
     const url = `${baseUrl}/audit/export?${exportParams}`;
     // Trigger download via a temporary anchor tag
     const a = document.createElement('a');

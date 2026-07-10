@@ -82,9 +82,10 @@ services:
         value: "22"
       - key: NODE_ENV
         value: production
-      # NEXT_PUBLIC_* are baked in at BUILD time. If the API service name/URL
-      # changes, update these AND rebuild the web service (clear build cache).
-      - key: NEXT_PUBLIC_API_URL
-        value: https://qps-kimio-api.onrender.com/api
+      # Runtime var (NOT baked into the bundle): the Next.js server proxies
+      # /api/* and /uploads/* to this URL. Change it + restart — no rebuild.
+      - key: API_PROXY_TARGET
+        value: https://qps-kimio-api.onrender.com
+      # WebSocket connects directly to the API (baked at build time).
       - key: NEXT_PUBLIC_WS_URL
         value: https://qps-kimio-api.onrender.com

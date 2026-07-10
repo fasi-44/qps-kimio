@@ -7,7 +7,10 @@ export class ApiError extends Error {
   }
 }
 
-export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api');
+// Default to a same-origin path so the browser never carries the API host.
+// Next.js rewrites (see next.config.ts) proxy /api/* to the real backend at
+// runtime — no API URL baked into the client bundle, and no cross-origin/CORS.
+export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '/api');
 
 /** Origin that serves uploaded files (the API host without the /api prefix). */
 export const FILE_BASE_URL = BASE_URL.replace(/\/api\/?$/, '');

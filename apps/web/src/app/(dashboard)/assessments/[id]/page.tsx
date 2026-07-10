@@ -158,7 +158,7 @@ export default function AssessmentDetailPage() {
     try {
       const token = useAuthStore.getState().accessToken;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/exports/assessment/${id}/excel`,
+        `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/exports/assessment/${id}/excel`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) throw new Error('Export failed');
