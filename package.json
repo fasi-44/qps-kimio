@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "NQAS Accreditation Platform — Oncology Hospital",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter @nabh/api dev\" \"pnpm --filter @nabh/web dev\"",
     "build": "pnpm db:generate && pnpm --filter @nabh/api build && pnpm --filter @nabh/web build",

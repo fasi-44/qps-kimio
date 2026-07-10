@@ -9,7 +9,9 @@ build/
 .next/
 out/
 
-docs
+/docs/*
+# Seed data required at build/deploy time (Render) — must be tracked
+!/docs/DH-20_NQAS_Toolkit _28-June_2023.xlsx
 
 # Environment files
 .env

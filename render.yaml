@@ -1,0 +1,104 @@
+# Render Blueprint — NQAS Platform (free tier)
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Creates: 1 Postgres DB + 2 web services (NestJS API, Next.js web).
+# The API build step runs `prisma migrate deploy` + the seed, so every deploy
+# brings the schema up to date and (idempotently) re-seeds reference data.
+#
+# ⚠️ Free-tier notes:
+#   - Web services sleep after ~15 min idle (cold start on next request).
+#   - Free Postgres is deleted ~30 days after creation — export/upgrade before then.
+#   - Disk is ephemeral: files saved to apps/api/uploads are lost on redeploy.
+#     Move uploads to object storage (S3/R2) for anything you need to keep.
+
+databases:
+  - name: qps-db
+    databaseName: nabh_db
+    user: nabh_user
+    plan: free
+
+services:
+  # ── NestJS API ────────────────────────────────────────────────────────────
+  - type: web
+    name: qps-kmio-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    # Install dev deps too (nest cli / prisma / tsx are devDependencies),
+    # generate the Prisma client, apply migrations, seed, then compile.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm db:generate &&
+      pnpm db:migrate:deploy &&
+      pnpm db:seed &&
+      pnpm --filter @nabh/api build
+    startCommand: pnpm --filter @nabh/api start:prod
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: API_PREFIX
+        value: api
+      # Render injects PORT; main.ts binds it (0.0.0.0).
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qps-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # CORS: must match the web service's public URL. Set after first deploy
+      # (or paste the qps-kmio-web URL here) — e.g. https://qps-kmio-web.onrender.com
+      - key: FRONTEND_URL
+        sync: false
+      # Seed accounts (optional overrides; defaults live in the seed script)
+      - key: SEED_ADMIN_EMAIL
+        value: admin@kmio.ac.in
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_SUPERADMIN_PASSWORD
+        sync: false
+      # Email (Gmail SMTP) — fill in to enable outbound mail, otherwise leave blank
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  # ── Next.js web ───────────────────────────────────────────────────────────
+  - type: web
+    name: qps-kmio-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile --prod=false &&
+      pnpm --filter @nabh/web build
+    startCommand: pnpm --filter @nabh/web start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # NEXT_PUBLIC_* are baked in at BUILD time — set these to the API's public
+      # URL BEFORE the web build runs, and rebuild if the API hostname changes.
+      # e.g. https://qps-kmio-api.onrender.com/api  and  https://qps-kmio-api.onrender.com
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_WS_URL
+        sync: false
