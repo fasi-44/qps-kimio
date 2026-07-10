@@ -31,15 +31,9 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: >-
-      corepack enable &&
-      pnpm install --frozen-lockfile --prod=false &&
-      pnpm db:generate &&
-      pnpm db:migrate:deploy &&
-      pnpm db:seed &&
-      pnpm --filter @nabh/api build &&
-      pnpm --filter @nabh/web build
-    # Root "start" runs the API (internal :4000) and Next.js ($PORT) together.
+    # Root "build" = prisma generate + migrate deploy + seed + compile API + web.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm run build
+    # Root "start" runs the API (compiled, internal :4000) and Next.js ($PORT).
     startCommand: pnpm start
     envVars:
       - key: NODE_VERSION

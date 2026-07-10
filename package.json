@@ -6,8 +6,7 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter @nabh/api dev\" \"pnpm --filter @nabh/web dev\"",
-    "build": "pnpm db:generate && pnpm --filter @nabh/api build && pnpm --filter @nabh/web build",
-    "render:build": "pnpm install --frozen-lockfile --prod=false && pnpm db:generate && pnpm db:migrate:deploy && pnpm db:seed && pnpm --filter @nabh/web build",
+    "build": "pnpm db:generate && pnpm db:migrate:deploy && pnpm db:seed && pnpm --filter @nabh/api build && pnpm --filter @nabh/web build",
     "start": "concurrently \"pnpm --filter @nabh/api start:prod\" \"pnpm --filter @nabh/web start\"",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
