@@ -7,10 +7,10 @@ export class ApiError extends Error {
   }
 }
 
-// Default to a same-origin path so the browser never carries the API host.
-// Next.js rewrites (see next.config.ts) proxy /api/* to the real backend at
-// runtime — no API URL baked into the client bundle, and no cross-origin/CORS.
-export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '/api');
+// Deployed API base. Hardcoded to the onrender service for now.
+// LOCAL DEV: change the fallback to '/api' (same-origin → Next proxies to your
+// local backend on :4000, see next.config.ts). Or set NEXT_PUBLIC_API_URL.
+export const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'https://qps-kimio.onrender.com/api');
 
 /** Origin that serves uploaded files (the API host without the /api prefix). */
 export const FILE_BASE_URL = BASE_URL.replace(/\/api\/?$/, '');
